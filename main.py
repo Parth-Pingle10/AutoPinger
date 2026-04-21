@@ -95,6 +95,70 @@ async def start(url:str):
     
     return{"message":f"Started pinging {url}"}
 
+@app.get("/stats/{url:path}")
+async def stats(url:str):
+    if not url.startswith("http"):
+        url = "https://"+url
+        
+    doc = await collection.find_one({"url":url})
+    
+    if not doc:
+        return{"message":f"{url} is not running"}
+                
+    last_ping = str(doc.get("last_ping"))
+    created_at = str(doc.get("created_at"))
+    
+    last_data = last_ping.split(" ")[0]
+    created_data = created_at.split(" ")[0]
+    
+    last_time =  get_ist_time(last_ping)
+    created_time =  get_ist_time(created_at)
+    
+    return{
+        "url":url,
+        "ping_count":doc.get("ping_count"),
+        "last_ping":{
+            "date":last_data,
+            "time":last_time,
+        },
+        "status":doc.get("status"),
+        "created_at":{
+            "date":created_data,
+            "time":created_time,
+        }
+    }
+        
+        
+        
+
+def get_ist_time(time: str):
+    if not time or time == "None":
+        return "Never"
+
+    # 🔥 handle both formats (T or space)
+    if "T" in time:
+        time_part = time.split("T")[1]
+    else:
+        time_part = time.split(" ")[1]
+
+    time_part = time_part.split("+")[0]
+
+    hour = int(time_part.split(":")[0])
+    minute = int(time_part.split(":")[1])
+    second = int(time_part.split(":")[2].split(".")[0])
+
+    hour += 5
+    minute += 30
+
+    if minute >= 60:
+        hour += minute // 60
+        minute = minute % 60
+
+    if hour >= 12:
+        hour = hour % 12
+
+    return f"{hour:02d}:{minute:02d}:{second:02d}"
+    
 
 @app.get("/stop/{url:path}")
 async def stop(url:str):
